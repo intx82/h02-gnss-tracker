@@ -21,8 +21,7 @@ TEST(ArgParserTest, ValidInputDefault) {
     EXPECT_EQ(parser.get_port(), "/dev/ttyUSB0");
     EXPECT_EQ(parser.get_baud(), (speed_t)B9600);
     // "localhost" is typically resolved to "127.0.0.1".
-    EXPECT_EQ(parser.get_server_ip(), "127.0.0.1");
-    EXPECT_EQ(parser.get_server_port(), 1234);
+    EXPECT_EQ(parser.get_server(), "localhost:1234");
     EXPECT_FALSE(parser.get_verbose());
 }
 
@@ -33,8 +32,7 @@ TEST(ArgParserTest, ValidInputAllParameters) {
     EXPECT_NO_THROW(parser.parse(static_cast<int>(argv.size()), argv.data()));
     EXPECT_EQ(parser.get_port(), "/dev/ttyS1");
     EXPECT_EQ(parser.get_baud(), (speed_t)B115200);
-    EXPECT_EQ(parser.get_server_ip(), "127.0.0.1");
-    EXPECT_EQ(parser.get_server_port(), 8080);
+    EXPECT_EQ(parser.get_server(), "localhost:8080");
     EXPECT_TRUE(parser.get_verbose());
 }
 
@@ -87,7 +85,6 @@ TEST(ArgParserTest, UnknownArgument) {
     // The verbose flag should be set.
     EXPECT_TRUE(parser.get_verbose());
     // Server information should still be parsed correctly.
-    EXPECT_EQ(parser.get_server_ip(), "127.0.0.1");
-    EXPECT_EQ(parser.get_server_port(), 8080);
+    EXPECT_EQ(parser.get_server(), "localhost:8080");
 }
 

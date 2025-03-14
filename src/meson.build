@@ -4,20 +4,19 @@ project('h02_serializer', 'cpp',
 )
 
 add_global_arguments('-fPIC', language : 'cpp')
-# add_project_arguments('-Ofast', '-g3',  language : 'cpp')
-
-#lfmt_dep = dependency('fmt', required: true)
+libuv_dep = dependency('libuv', required: true)
 
 executable('h02_serializer',
     'main.cpp',
     'TinyGPS++.cpp',
     'Arduino.cpp',
     'task_loop.cpp',
-#    dependencies: lfmt_dep,
+    'gnss_client.cpp',
+    dependencies: libuv_dep,
     install: true
 )
 
-dependency_gtest = dependency('gtest', required: true)
+gtest_dep = dependency('gtest', required: true)
 
 test_exe = executable('h02_serializer_tests',
     'TinyGPS++.cpp',
@@ -28,7 +27,7 @@ test_exe = executable('h02_serializer_tests',
     'tests/tinygps.test.cpp',
     'tests/arg_parser.test.cpp',
     'tests/task_loop.test.cpp',
-    dependencies: dependency_gtest, 
+    dependencies: gtest_dep, 
     install: false
 )
 

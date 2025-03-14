@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/src/build/h02_serializer",
-            "args": ["-b", "57600", "-s", "localhost:5050"],
+            "args": ["-b", "57600", "-s", "localhost:5005", "-v"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

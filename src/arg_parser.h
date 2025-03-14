@@ -42,9 +42,10 @@ public:
     arg_parser()
         : help_flag(false),
           port("/dev/ttyUSB0"),
+          uid("123456789012345"),
+          interval(1),
           baud(B9600),  // default baud rate set to B9600
-          server_ip(""),
-          server_port(0),
+          server(""),
           verbose(false) {}
 
     // Parse command-line arguments.
@@ -70,31 +71,22 @@ public:
                 } else {
                     throw std::runtime_error("Missing value for baudrate");
                 }
+            } else if (arg == "-i" || arg == "--id") {
+                if (i + 1 < argc) {
+                    uid = argv[++i];
+                } else {
+                    throw std::runtime_error("Missing value for port");
+                }
+            } else if (arg == "-t" || arg == "--interval") {
+                if (i + 1 < argc) {
+                    interval = std::stoi(argv[++i]);
+                    if (interval == 0) {
+                        throw std::runtime_error("Interval must higher than 0");
+                    }
+                }
             } else if (arg == "-s" || arg == "--server") {
                 if (i + 1 < argc) {
-                    std::string server_arg = argv[++i];
-                    size_t colon_pos = server_arg.find(':');
-                    if (colon_pos == std::string::npos) {
-                        throw std::runtime_error("Missing colon ':' in server argument. Expected format: host:port");
-                    }
-                    std::string host = server_arg.substr(0, colon_pos);
-                    std::string port_str = server_arg.substr(colon_pos + 1);
-                    try {
-                        server_port = std::stoi(port_str);
-                    } catch (...) {
-                        throw std::runtime_error("Invalid server port value");
-                    }
-                    // Resolve host using DNS.
-                    struct hostent *he = gethostbyname(host.c_str());
-                    if (!he) {
-                        throw std::runtime_error("Failed to resolve host: " + host);
-                    }
-                    struct in_addr **addr_list = (struct in_addr **)he->h_addr_list;
-                    if (addr_list[0] != nullptr) {
-                        server_ip = std::string(inet_ntoa(*addr_list[0]));
-                    } else {
-                        throw std::runtime_error("No valid IP addresses found for host: " + host);
-                    }
+                    server = argv[++i];
                 } else {
                     throw std::runtime_error("Missing value for server");
                 }
@@ -105,7 +97,7 @@ public:
             }
         }
         // If help was not requested, ensure required arguments are set.
-        if (!help_flag && server_ip.empty()) {
+        if (!help_flag && server.empty()) {
             throw std::runtime_error("Server is required. Use -s or --server to specify it (format: host:port).");
         }
     }
@@ -118,15 +110,18 @@ public:
                   << "  -p, --port [tty]              Use next tty, by default /dev/ttyUSB0 (optional)\n"
                   << "  -b, --baud [baudrate]         Use next baudrate for port, by default 9600 (optional)\n"
                   << "  -s, --server [host:port]      h02 remote server (required). If host is not an IP, DNS resolution will be performed.\n"
+                  << "  -i, --id [device-id]          h02 device ID, 15 symbols. \n"
+                  << "  -t, --interval [interval]     Interval in seconds between server notifications\n"
                   << "  -v, --verbose                 Enable verbose output\n";
     }
 
     // Getters.
     bool get_help_flag() const { return help_flag; }
     std::string get_port() const { return port; }
+    std::string get_id() const { return uid; }
+    int get_interval() const { return interval; }
     speed_t get_baud() const { return baud; }
-    std::string get_server_ip() const { return server_ip; }
-    int get_server_port() const { return server_port; }
+    std::string get_server() const { return server; }
     bool get_verbose() const { return verbose; }
 
 private:
@@ -143,9 +138,10 @@ private:
 
     bool        help_flag;
     std::string port;
+    std::string uid;
+    int         interval;
     speed_t     baud;
-    std::string server_ip;
-    int         server_port;
+    std::string server;
     bool        verbose;
 };
 
