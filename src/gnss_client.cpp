@@ -69,7 +69,8 @@ void gnss_client_t::on_connect(uv_connect_t* req, int status) {
         client->reconnect();
     } else {
         uv_read_start(reinterpret_cast<uv_stream_t*>(client->tcp_), alloc_cb, on_read);
-        client->reconnect_in_ = 1;
+        client->reconnect_in_ = 0;
+        client->connected = true;
     }
     free(req);
 }
@@ -103,7 +104,7 @@ bool gnss_client_t::connect_to_server() {
 
 gnss_client_t::gnss_client_t(const std::string &server_addr)
     : loop_(uv_default_loop()), tcp_(nullptr), connect_req_(nullptr),
-      server_port_(default_server_port), reconnect_in_(1), reconnect_timeout(128)
+      server_port_(default_server_port), reconnect_in_(0), reconnect_timeout(10), connected(false)
 {
     // Parse server_addr.
     size_t colon_pos = server_addr.find(':');
@@ -141,12 +142,14 @@ gnss_client_t::gnss_client_t(const std::string &server_addr)
 gnss_client_t::~gnss_client_t() {
     // Let the libuv loop clean up the handle asynchronously.
     if (tcp_) {
-        uv_close(reinterpret_cast<uv_handle_t*>(tcp_), on_close);
+        uv_tcp_close_reset(tcp_, on_close);
+        delete tcp_;
+        tcp_ = nullptr;
     }
 }
 
 bool gnss_client_t::send_msg(const std::string &packet) {
-    if (!tcp_) {
+    if (!tcp_ || !connected) {
         std::cerr << "TCP handle not initialized." << std::endl;
         reconnect();
         return false;
@@ -163,13 +166,16 @@ bool gnss_client_t::send_msg(const std::string &packet) {
 }
 
 bool gnss_client_t::reconnect() {
-    reconnect_in_ *= 2;
-    if (reconnect_in_ > reconnect_timeout) {
-        throw std::runtime_error("Can't connect to the server");
+
+    connected = false;
+    if (uv_now(loop_) < reconnect_in_) {
+        return false;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(reconnect_in_));
+
+    reconnect_in_ =  uv_now(loop_) + (reconnect_timeout * 1000);
 
     if (tcp_) {
+        uv_tcp_close_reset(tcp_, on_close);
         delete tcp_;
         tcp_ = new uv_tcp_t;
         uv_tcp_init(loop_, tcp_);
@@ -194,8 +200,4 @@ void gnss_client_t::set_on_read(const std::function<void(gnss_client_t*, uint8_t
 }
 
 void gnss_client_t::close() {
-    if (tcp_) {
-        uv_close(reinterpret_cast<uv_handle_t*>(tcp_), on_close);
-    }
-    uv_stop(loop_);
 }

@@ -27,7 +27,7 @@ test_exe = executable('h02_serializer_tests',
     'tests/tinygps.test.cpp',
     'tests/arg_parser.test.cpp',
     'tests/task_loop.test.cpp',
-    dependencies: gtest_dep, 
+    dependencies: [gtest_dep, libuv_dep],
     install: false
 )
 

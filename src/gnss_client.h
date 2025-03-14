@@ -33,6 +33,8 @@ public:
 
     // Closes the connection and terminates the libuv loop.
     void close();
+    
+    bool is_connected() const { return connected; }
 
 private:
     // Resolves the given host to an IP address.
@@ -55,9 +57,10 @@ private:
 
     std::string server_ip_;       // Resolved IP address.
     std::string server_hostname_; // Hostname (or provided IP) part.
-    int server_port_;             // Parsed port (or default).
-    int reconnect_in_;
-    const int reconnect_timeout;
+    int         server_port_;             // Parsed port (or default).
+    uint64_t    reconnect_in_;
+    const int   reconnect_timeout;
+    bool        connected;
 
     // Callback invoked when data is read.
     std::function<void(gnss_client_t*, uint8_t*, size_t)> on_read_callback_;

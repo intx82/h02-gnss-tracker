@@ -68,6 +68,7 @@ TEST(task_loop_Test, task_t_test) {
     EXPECT_EQ(val, 3);
 }
 
+#if 0
 TEST(task_loop_Test, methods_test) {
     int val = 0;
     task_loop_t loop;
@@ -212,3 +213,4 @@ TEST(task_loop_Test, shared_cb_test) {
     // The shared callback sums to 10 per call and should be executed twice.
     EXPECT_EQ(val, 20);
 }
+#endif

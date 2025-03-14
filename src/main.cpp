@@ -6,7 +6,8 @@
 #include "task_loop.h"
 #include "unix_tty.h"
 #include <iostream>
-#include <thread>
+#include <sched.h>
+#include <queue>
 
 // #include "spdlog/spdlog.h"
 
@@ -28,9 +29,14 @@ void gps_handle_task(TinyGPSPlus &gps, unix_tty_t &uart, bool verbose)
     } while (c != -1);
 }
 
-void server_handle_task(TinyGPSPlus &gps, std::string &uid, gnss_client_t& tcp, bool verbose)
+void server_handle_task(TinyGPSPlus &gps, arg_parser &args, gnss_client_t &tcp)
 {
+    static std::queue<location_t> cache;
+
     if (gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) {
+
+        std::string location_packet;
+
         std::tm _tm = {};
         _tm.tm_year = gps.date.year();
         _tm.tm_mon = gps.date.month() - 1;
@@ -39,17 +45,42 @@ void server_handle_task(TinyGPSPlus &gps, std::string &uid, gnss_client_t& tcp, 
         _tm.tm_min = gps.time.minute();
         _tm.tm_sec = gps.time.second();
 
-        location_t data(uid.c_str(),
+        location_t data(args.get_id().c_str(),
                         gps.location.lat(), gps.location.lng(),
                         gps.speed.kmph(),
                         gps.course.deg(), _tm, 0xFFFFFFFF);
 
-        std::string location_packet = data.serialize();
-        if (verbose) {
-            LOG(INFO, "Sending: %s", location_packet.c_str());
+        if (tcp.is_connected()) {
+
+            while(!cache.empty()) {
+                location_packet = cache.front().serialize();
+                if (args.get_verbose()) {
+                    LOG(INFO, "Sending cached: %s", location_packet.c_str());
+                }
+                tcp.send_msg(location_packet.c_str());
+                cache.pop();
+            }
+
+            location_packet = data.serialize();
+            if (args.get_verbose()) {
+                LOG(INFO, "Sending: %s", location_packet.c_str());
+            }
+
+            tcp.send_msg(location_packet.c_str());
+        } else {
+            if (args.get_verbose()) {
+                location_packet = data.serialize();
+                LOG(INFO, "Server is unavailable, save to cache: %s", location_packet.c_str());
+            }
+            cache.push(data);
+            tcp.reconnect();
         }
-        tcp.send_msg(location_packet.c_str());
     }
+}
+
+void signal_handler(uv_signal_t *req, int signum)
+{
+    uv_stop(uv_default_loop());
 }
 
 int main(int argc, char **argv)
@@ -62,26 +93,27 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
 
-    std::string uid = args.get_id();
-    TinyGPSPlus gps;
-    unix_tty_t uart(args.get_port().c_str(), args.get_baud());
-    gnss_client_t tcp(args.get_server());
-    uart.set_nonblocking(true);
-    std::thread uv_thread([&tcp]() { tcp.run(); });
+    TinyGPSPlus     gps;
+    unix_tty_t      uart(args.get_port().c_str(), args.get_baud());
+    gnss_client_t   tcp(args.get_server());
+    task_loop_t     loop;
+    uv_signal_t     sig;
 
-    task_loop_t loop;
+    uv_signal_init(uv_default_loop(), &sig);
+    uv_signal_start(&sig, signal_handler, SIGINT);
+    uart.set_nonblocking(true);
+
     tcp.set_on_read([](gnss_client_t *client, uint8_t *data, size_t sz) {
         LOG(AUDIT, "Received: %.*s", (int)sz, data);
     });
 
     loop.add(new task_t<TinyGPSPlus &, unix_tty_t &, bool>(gps_handle_task, gps, uart, args.get_verbose()), 0);
-    loop.add(new task_t<TinyGPSPlus &, std::string &, gnss_client_t &, bool>(server_handle_task, gps, uid, tcp, args.get_verbose()), args.get_interval() * 1000);
+    loop.add(new task_t<TinyGPSPlus &, arg_parser &, gnss_client_t &>(server_handle_task, gps, args, tcp), args.get_interval() * 1000);
 
-    while (true) {
-        loop.scheduler();
-    }
+    uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 
     tcp.close();
-    uv_thread.join();
+    uv_stop(uv_default_loop());
+
     return 0;
 }
