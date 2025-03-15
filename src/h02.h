@@ -23,6 +23,20 @@ public:
     location_t(const std::string& message) {
         deserialize(message);
     }
+    
+    static double convert_lat(double in) {
+        int degrees = static_cast<int>(in);
+        double fractional = in - degrees;
+        double minutes = fractional * 60;
+        return degrees * 100 + minutes;
+    }
+    
+    static double convert_lng(double in) {
+        int degrees = static_cast<int>(in);
+        double fractional = in - degrees;
+        double minutes = fractional * 60;
+        return degrees * 100 + minutes;
+    }
 
     std::string serialize() const {
         std::ostringstream oss;
@@ -31,8 +45,8 @@ public:
             << std::setw(2) << std::setfill('0') << date_time.tm_min
             << std::setw(2) << std::setfill('0') << date_time.tm_sec
             << ",A," 
-            << std::fixed << std::setprecision(4) << latitude * 100 << ",N," 
-            << longitude * 100 << ",E," 
+            << std::fixed << std::setprecision(4) << convert_lat(latitude) << ",N," 
+            << std::fixed << std::setprecision(4) << convert_lng(longitude) << ",E," 
             << std::setprecision(2) << speed << "," 
             << std::setprecision(2) << direction << ","
             << std::setw(2) << std::setfill('0') << date_time.tm_mday
