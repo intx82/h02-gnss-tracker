@@ -8,7 +8,7 @@
             "name": "dbg",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/src/build/h02_serializer",
+            "program": "${workspaceRoot}/src/build/h02cl",
             "args": ["-b", "57600", "-s", "localhost:5005", "-v"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

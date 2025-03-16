@@ -6,7 +6,7 @@ project('h02_serializer', 'cpp',
 add_global_arguments('-fPIC', language : 'cpp')
 libuv_dep = dependency('libuv', required: true)
 
-executable('h02_serializer',
+executable('h02cl',
     'main.cpp',
     'TinyGPS++.cpp',
     'Arduino.cpp',
@@ -18,7 +18,7 @@ executable('h02_serializer',
 
 gtest_dep = dependency('gtest', required: true)
 
-test_exe = executable('h02_serializer_tests',
+test_exe = executable('h02cl_tests',
     'TinyGPS++.cpp',
     'Arduino.cpp',
     'task_loop.cpp',
@@ -31,4 +31,4 @@ test_exe = executable('h02_serializer_tests',
     install: false
 )
 
-test('h02_serializer_tests', test_exe)
+test('h02cl_tests', test_exe)
