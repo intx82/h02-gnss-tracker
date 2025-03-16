@@ -1,4 +1,4 @@
-project('h02_serializer', 'cpp',
+project('h02-gps-tracker', 'cpp',
     version: '1.0.0',
     default_options: ['cpp_std=c++17']
 )
