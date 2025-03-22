@@ -18,7 +18,7 @@ define Package/h02-gnss-client
   SECTION:=net
   CATEGORY:=Network
   TITLE:=H02 GNSS Client
-  DEPENDS:=+libstdcpp +libuv
+  DEPENDS:=+libstdcpp
 endef
 
 define Package/h02-gnss-client/description

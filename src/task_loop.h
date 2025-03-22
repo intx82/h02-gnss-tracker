@@ -1,15 +1,15 @@
 #ifndef __TASK_LOOP_HPP
 #define __TASK_LOOP_HPP
 
-#include <chrono>
-#include <list>
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
-#include <uv.h>
+#include <list>
+#include <chrono>
 
 #include "Arduino.h"
 #include "callback.h"
+
 
 /**
  * Task loop class
@@ -48,15 +48,14 @@
  * @warning: If MCU goes to sleep, task period time also could be violated
  * @warning: For correctly working 'remove', 'find', 'add_once' methods - functor should have correctly written operator ==
  */
-class task_loop_t
-{
-public:
+class task_loop_t {
+   public:
     /**
      * @brief Typedef task - defines task method signature
      * @param #1 task ID
      * @param #2 task arguments
      */
-    typedef void (*func_t)(int32_t, void *);
+    typedef void (*func_t)(int32_t, void*);
 
     /**
      * @brief Add callback to task loop with two arguments - himself ID and pointer to task arguments (which will be
@@ -68,7 +67,7 @@ public:
      * @param args Arguments for task
      * @return Task ID
      */
-    int32_t add(func_t method, int32_t period, void *args);
+    int32_t add(func_t method, int32_t period, void* args);
 
     /**
      * @brief Add callback to task loop with functor ( @see task_t @see functor_t)
@@ -78,7 +77,7 @@ public:
      * deleted from callback list
      * @return Task ID
      */
-    int32_t add(functor_t *functor, int32_t period);
+    int32_t add(functor_t* functor, int32_t period);
 
     /**
      * Add callback for task loop with two arguments - himself ID and pointer to task arguments (which will be called
@@ -90,18 +89,18 @@ public:
      * @param args Arguments for task
      * @return task ID
      */
-    int32_t add_once(func_t method, int32_t period, void *args);
+    int32_t add_once(func_t method, int32_t period, void* args);
 
     /**
      * @brief Add callback for task loop with functor
      * @remark If task already in list - will returned -1 and new task will not added
-     *
+     * 
      * @param functor Pointer to functor
      * @param period Period in which task function will be called, if provided -1 then task called only once and then
      * deleted from callback list
      * @return Task ID
      */
-    int32_t add_once(functor_t *functor, int32_t period);
+    int32_t add_once(functor_t* functor, int32_t period);
 
     /**
      * Get task period
@@ -137,7 +136,7 @@ public:
      * @param task Pointer to task
      * @return True if remove successful
      */
-    bool remove(functor_t *task);
+    bool remove(functor_t* task);
 
     /**
      * @brief Search Task ID by method pointer
@@ -151,7 +150,13 @@ public:
      * @param method Pointer to method
      * @return -1 if task not found
      */
-    int32_t find(functor_t *functor);
+    int32_t find(functor_t* functor);
+
+    /**
+     * Scheduler function.
+     * Should called from `while(true)`
+     */
+    uint64_t scheduler();
 
     /**
      * @brief Конструктор
@@ -164,17 +169,16 @@ public:
      */
     ~task_loop_t();
 
-private:
+   private:
     /**
      * Task structure
      */
-    class cb_t
-    {
-    public:
+    class cb_t {
+       public:
         int32_t tid;         /**< Task ID */
-        functor_t *callable; /**< Callback function itself */
+        functor_t* callable; /**< Callback function itself */
         int32_t period;      /**< Task period */
-        uv_timer_t timer;    /**< libuv timer  */
+        uint64_t next_time;  /**< Task previous tick time */
         bool is_static;      /**< Show, should be functor destroyed after freeing memory */
 
         /**
@@ -184,16 +188,12 @@ private:
          * @param period Interval in which task should be called
          * @param args Task arguments
          */
-        cb_t(int32_t tid, functor_t *cb, int32_t period)
+        cb_t(int32_t tid, functor_t* cb, int32_t period)
             : tid(tid),
               callable(cb),
-              period(period) {
-
-            uv_timer_init(uv_default_loop(), &timer);
-            timer.data = this;
-            int next_time = period == 0 ? 1 : period;
-            uv_timer_start(&timer, __func, period, next_time);
-        }
+              period(period),
+              next_time(period > 0 ? sys_t::get_ticks() + period : 0),
+              is_static(true) {}
 
         /**
          * @brief task structure
@@ -203,26 +203,15 @@ private:
          * @param args Task arguments
          */
         cb_t(int32_t tid, func_t _cb, int32_t period, void* args)
-            : tid(tid), period(period), is_static(false) {
+            : tid(tid), period(period), next_time(period > 0 ? sys_t::get_ticks() + period : 0), is_static(false) {
             task_t<int32_t, void*>* t = new task_t<int32_t, void*>(_cb, tid, args);
             callable = t->get_base();
-            uv_timer_init(uv_default_loop(), &timer);
-            timer.data = this;
-            int next_time = period == 0 ? 1 : period;
-            uv_timer_start(&timer, __func, period, next_time);
         }
 
         ~cb_t() {
-            uv_timer_stop(&timer);
             if (!is_static) {
                 delete callable;
             }
-        }
-        
-    private:
-        static void __func(uv_timer_t *handle) {
-            cb_t* cb = reinterpret_cast<cb_t*>(handle->data);
-            (*cb->callable)();
         }
     };
 
@@ -238,7 +227,7 @@ private:
      * @param tid Pointer to task method
      * @return cb_t* Task definition
      */
-    cb_t *_find(int32_t tid);
+    cb_t* _find(int32_t tid);
 
     /**
      * @brief Search task by pointer to task method
@@ -246,33 +235,33 @@ private:
      * @param cb Pointer to task method
      * @return cb_t* Task definition
      */
-    cb_t *_find(func_t cb);
+    cb_t* _find(func_t cb);
 
     /**
      * @brief Search task by functor
      *  @param cb Pointer to task method
      * @return cb_t* Task definition
      */
-    cb_t *_find(functor_t *cb);
+    cb_t* _find(functor_t* cb);
 
     /**
      * @brief Internal remove method
      *
      * @param cb
      */
-    void _remove(cb_t *cb);
+    void _remove(cb_t* cb);
 
     /**
      * @brief Internal implementation of add
      *
      * @param cb
      */
-    int32_t _add(cb_t *cb);
+    int32_t _add(cb_t* cb);
 
-    void *mtx;
+    void* mtx;
     bool _break_sch;
     uint64_t minimal_time_to_next = UINT32_MAX;
-    std::list<cb_t *> cb_list; /**< Tasks list	*/
+    std::list<cb_t*> cb_list; /**< Tasks list	*/
 };
 
 #endif /* __TASK_LOOP_HPP */

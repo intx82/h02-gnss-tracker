@@ -4,15 +4,13 @@ project('h02-gps-tracker', 'cpp',
 )
 
 add_global_arguments('-fPIC', language : 'cpp')
-libuv_dep = dependency('libuv', required: true)
 
 executable('h02cl',
     'main.cpp',
     'TinyGPS++.cpp',
     'Arduino.cpp',
     'task_loop.cpp',
-    'gnss_client.cpp',
-    dependencies: libuv_dep,
+    'tcp_client.cpp',
     install: true
 )
 
@@ -27,7 +25,7 @@ test_exe = executable('h02cl_tests',
     'tests/tinygps.test.cpp',
     'tests/arg_parser.test.cpp',
     'tests/task_loop.test.cpp',
-    dependencies: [gtest_dep, libuv_dep],
+    dependencies: [gtest_dep],
     install: false
 )
 

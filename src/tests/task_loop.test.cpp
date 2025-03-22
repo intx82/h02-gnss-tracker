@@ -68,7 +68,6 @@ TEST(task_loop_Test, task_t_test) {
     EXPECT_EQ(val, 3);
 }
 
-#if 0
 TEST(task_loop_Test, methods_test) {
     int val = 0;
     task_loop_t loop;
@@ -164,6 +163,7 @@ TEST(task_loop_Test, method_rm_test) {
         [](int32_t tid, void* args) {
             (void)tid;
             *static_cast<int*>(args) += 1;
+            LOG(TEST, "Arg: %d", *static_cast<int*>(args));
         },
         10, static_cast<void*>(&val));
 
@@ -175,9 +175,10 @@ TEST(task_loop_Test, method_rm_test) {
 
     uint64_t start = sys_t::get_ticks();
     LOG(TEST, "Start %lu", start);
-    while (sys_t::get_ticks() <= (start + 255)) {
-        loop.scheduler();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    while (sys_t::get_ticks() <= (start + 257)) {
+        int sleep_until = loop.scheduler();
+        LOG(TEST, "Sleep until: %d", sleep_until);
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_until));
     }
 
     EXPECT_EQ(val, 25);
@@ -206,11 +207,9 @@ TEST(task_loop_Test, shared_cb_test) {
     uint64_t start = sys_t::get_ticks();
     LOG(TEST, "Start %lu", start);
     while (sys_t::get_ticks() <= (start + 250)) {
-        loop.scheduler();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(loop.scheduler()));
     }
 
     // The shared callback sums to 10 per call and should be executed twice.
     EXPECT_EQ(val, 20);
 }
-#endif

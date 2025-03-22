@@ -87,6 +87,10 @@ public:
             } else if (arg == "-s" || arg == "--server") {
                 if (i + 1 < argc) {
                     server = argv[++i];
+                    size_t colon_pos = server.find(':');
+                    if (colon_pos == std::string::npos) {
+                        throw std::runtime_error("Missing value for server port");
+                    }
                 } else {
                     throw std::runtime_error("Missing value for server");
                 }

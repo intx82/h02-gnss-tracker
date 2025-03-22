@@ -1,7 +1,7 @@
 
 # H02 GNSS Tracker
 
-H02 GNSS Tracker is a C++ application that send GNSS data from serial port (NMEA) to remote GNSS (H02) server (for example traccar [https://github.com/traccar/traccar](https://github.com/traccar/traccar)). It uses asynchronous I/O via libuv ([https://libuv.org/](https://libuv.org/)) for networking and supports scheduling tasks. The application also includes unit tests built with Google Test ([https://github.com/google/googletest](https://github.com/google/googletest)).
+H02 GNSS Tracker is a C++ application that send GNSS data from serial port (NMEA) to remote GNSS (H02) server (for example traccar [https://github.com/traccar/traccar](https://github.com/traccar/traccar)). The application also includes unit tests built with Google Test ([https://github.com/google/googletest](https://github.com/google/googletest)).
 
 ## Usage
 
@@ -21,12 +21,11 @@ Options:
 
 ## Building the Application
 
-This project uses Meson as its build system and requires libuv (and gtest for tests).
+This project uses Meson as its build system and requires gtest for tests
 Prerequisites:
 
 - Meson and Ninja
 - A C++17 compiler
-- libuv (development files)
 - Google Test (development files) – for running tests
 - TinyGPS++ is used as a submodule. Before building, update the submodules by running: `git submodule update --init --recursive`
 

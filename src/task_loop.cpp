@@ -105,6 +105,7 @@ bool task_loop_t::set_period(int32_t tid, int32_t period) {
     MTX_LOCK(mtx);
 
     _cb->period = period;
+    _cb->next_time = 0;
 
     MTX_UNLOCK(mtx);
 
@@ -168,6 +169,33 @@ int32_t task_loop_t::find(functor_t *functor) {
     }
 
     return -1;
+}
+
+uint64_t task_loop_t::scheduler() {
+    MTX_LOCK(mtx);
+    _break_sch = false;
+    for (cb_t *cb : cb_list) {
+        if (static_cast<uint64_t>(cb->period) < minimal_time_to_next) {
+            minimal_time_to_next = cb->period;
+        }
+
+        if ((cb->next_time <= sys_t::get_ticks()) || (cb->period <= 0)) {
+            cb->next_time = sys_t::get_ticks() + cb->period;
+            (*cb->callable)();
+
+            if (cb->period == -1) {
+                remove(cb->tid);
+            }
+        }
+
+        if (_break_sch) {
+            minimal_time_to_next = 0;
+            break;
+        }
+    }
+
+    MTX_UNLOCK(mtx);
+    return minimal_time_to_next > 0 ? minimal_time_to_next : 0;
 }
 
 task_loop_t::cb_t *task_loop_t::_find(int32_t tid) {
