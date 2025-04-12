@@ -21,7 +21,8 @@ void gps_handle_task(TinyGPSPlus &gps, unix_tty_t &uart, bool verbose)
     do {
         c = uart.read_char_nonblocking();
         if ((c != -1) && (gps.encode((char)(c & 0xff)))) {
-            if (verbose && gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) {
+            if (verbose && gps.location.isValid() && gps.date.isValid() && gps.time.isValid() &&
+                        gps.location.FixQuality() != TinyGPSLocation::Quality::Invalid) {
                 LOG(INFO, "Location: %.6f %.6f @ %02d/%02d/%d %02d:%02d:%02d sat: %d proceed: %d",
                     gps.location.lat(), gps.location.lng(),
                     gps.date.day(), gps.date.month(), gps.date.year(),
@@ -37,7 +38,8 @@ void server_handle_task(TinyGPSPlus &gps, arg_parser &args, tcp_client_t &tcp)
 {
     static std::queue<location_t> cache;
 
-    if (gps.location.isValid() && gps.date.isValid() && gps.time.isValid()) {
+    if (gps.location.isValid() && gps.date.isValid() && gps.time.isValid() 
+                && gps.location.FixQuality() != TinyGPSLocation::Quality::Invalid ) {
         std::string location_packet;
 
         std::tm _tm = {};
